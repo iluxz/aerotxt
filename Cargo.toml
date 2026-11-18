@@ -1,0 +1,13 @@
+[package]
+name = "aerotxt"
+version = "0.1.0"
+edition = "2024"
+description = "A lightweight native text editor with aero theming"
+license = "MIT"
+repository = "https://github.com/iluxz/aerotxt"
+keywords = ["text-editor", "iced", "rust", "aero"]
+categories = ["text-editors"]
+
+[dependencies]
+iced = { version = "0.13", features = ["tokio", "advanced"] }
+rfd = "0.15"
