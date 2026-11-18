@@ -1,5 +1,5 @@
 use iced::widget::{button, column, container, row, text, text_editor, Space};
-use iced::{Element, Length, Subscription, Task, Theme, Color, Background, Border, Shadow};
+use iced::{Element, Length, Subscription, Task, Theme, Color, Background, Border, Shadow, Font};
 use rfd::FileDialog;
 use std::path::PathBuf;
 
@@ -7,7 +7,7 @@ fn main() -> iced::Result {
     iced::application("AeroTxt", AeroTxt::update, AeroTxt::view)
         .subscription(AeroTxt::subscription)
         .theme(AeroTxt::theme)
-        .window_size((900.0, 650.0))
+        .window_size((1000.0, 700.0))
         .run_with(AeroTxt::new)
 }
 
@@ -36,7 +36,7 @@ impl AeroTxt {
                 content: text_editor::Content::new(),
                 file_path: None,
                 status: "Ready".to_string(),
-                dark_mode: false,
+                dark_mode: true,
             },
             Task::none(),
         )
@@ -51,7 +51,7 @@ impl AeroTxt {
             Message::OpenFile => Task::perform(
                 async {
                     let file = FileDialog::new()
-                        .add_filter("Text", &["txt", "rs", "py", "js", "md", "toml", "json", "html", "css", "c", "cpp", "h", "go", "java"])
+                        .add_filter("Text", &["txt", "rs", "py", "js", "md", "toml", "json", "html", "css", "c", "cpp", "h", "go", "java", "lua"])
                         .add_filter("All", &["*"])
                         .pick_file();
                     match file {
@@ -122,51 +122,56 @@ impl AeroTxt {
     }
 
     fn view(&self) -> Element<'_, Message> {
-        let (bg, toolbar_bg, border_color, text_color, accent, btn_hover, btn_pressed) = if self.dark_mode {
+        let (bg, toolbar_bg, border_color, text_color, accent, btn_hover, btn_pressed, muted, selection) = if self.dark_mode {
             (
-                Color::from_rgb(0.12, 0.12, 0.16),
-                Color::from_rgb(0.16, 0.16, 0.20),
-                Color::from_rgb(0.25, 0.25, 0.30),
-                Color::from_rgb(0.90, 0.90, 0.95),
-                Color::from_rgb(0.40, 0.60, 0.90),
-                Color::from_rgb(0.22, 0.22, 0.28),
-                Color::from_rgb(0.18, 0.18, 0.24),
+                Color::from_rgb(0.12, 0.12, 0.14),
+                Color::from_rgb(0.16, 0.16, 0.18),
+                Color::from_rgb(0.22, 0.22, 0.26),
+                Color::from_rgb(0.92, 0.92, 0.95),
+                Color::from_rgb(0.30, 0.60, 0.95),
+                Color::from_rgb(0.22, 0.22, 0.26),
+                Color::from_rgb(0.14, 0.14, 0.17),
+                Color::from_rgb(0.50, 0.50, 0.55),
+                Color::from_rgb(0.25, 0.40, 0.65),
             )
         } else {
             (
-                Color::from_rgb(0.92, 0.94, 0.97),
-                Color::from_rgb(0.85, 0.88, 0.93),
-                Color::from_rgb(0.70, 0.75, 0.82),
-                Color::from_rgb(0.10, 0.10, 0.15),
-                Color::from_rgb(0.20, 0.45, 0.80),
-                Color::from_rgb(0.78, 0.82, 0.88),
-                Color::from_rgb(0.72, 0.76, 0.82),
+                Color::from_rgb(0.98, 0.98, 0.99),
+                Color::from_rgb(0.90, 0.90, 0.93),
+                Color::from_rgb(0.80, 0.80, 0.85),
+                Color::from_rgb(0.15, 0.15, 0.20),
+                Color::from_rgb(0.20, 0.45, 0.85),
+                Color::from_rgb(0.82, 0.82, 0.85),
+                Color::from_rgb(0.76, 0.76, 0.79),
+                Color::from_rgb(0.45, 0.45, 0.50),
+                Color::from_rgb(0.75, 0.85, 0.95),
             )
         };
 
-        let aero_button = |label: &'static str, msg: Message, tc: Color, bc: Color, ac: Color, bh: Color, bp: Color| {
+        let make_btn = |label: &'static str, msg: Message| {
+            let tc = text_color;
+            let bc = toolbar_bg;
+            let ac = accent;
+            let bh = btn_hover;
+            let bp = btn_pressed;
             button(text(label).size(13).color(tc))
                 .on_press(msg)
-                .padding([6, 14])
+                .padding([6, 12])
                 .style(move |_theme, status| {
-                    let (bg_color, border_color) = match status {
-                        iced::widget::button::Status::Hovered => (bh, ac),
-                        iced::widget::button::Status::Pressed => (bp, ac),
-                        _ => (bc, border_color),
+                    let bg_color = match status {
+                        iced::widget::button::Status::Hovered => bh,
+                        iced::widget::button::Status::Pressed => bp,
+                        _ => bc,
                     };
                     iced::widget::button::Style {
                         background: Some(Background::Color(bg_color)),
                         text_color: tc,
                         border: Border {
-                            color: border_color,
-                            width: 1.0,
+                            color: Color::TRANSPARENT,
+                            width: 0.0,
                             radius: 4.0.into(),
                         },
-                        shadow: Shadow {
-                            color: Color::from_rgba(0.0, 0.0, 0.0, 0.08),
-                            offset: iced::Vector::new(0.0, 1.0),
-                            blur_radius: 2.0,
-                        },
+                        shadow: Shadow::default(),
                         ..Default::default()
                     }
                 })
@@ -174,17 +179,9 @@ impl AeroTxt {
 
         let title_bar = container(
             row![
-                text("AeroTxt").size(14).color(text_color),
+                text("AeroTxt").size(15).color(accent).font(Font::MONOSPACE),
                 Space::with_width(Length::Fill),
-                aero_button(
-                    if self.dark_mode { "☀" } else { "🌙" },
-                    Message::ToggleTheme,
-                    text_color,
-                    toolbar_bg,
-                    accent,
-                    btn_hover,
-                    btn_pressed,
-                ),
+                make_btn(if self.dark_mode { "☀" } else { "🌙" }, Message::ToggleTheme),
             ]
             .align_y(iced::Alignment::Center)
             .padding([4, 12]),
@@ -194,7 +191,7 @@ impl AeroTxt {
             background: Some(Background::Color(toolbar_bg)),
             border: Border {
                 color: border_color,
-                width: 1.0,
+                width: 0.0,
                 radius: 0.0.into(),
             },
             ..Default::default()
@@ -202,23 +199,23 @@ impl AeroTxt {
 
         let toolbar = container(
             row![
-                aero_button("New", Message::NewTab, text_color, toolbar_bg, accent, btn_hover, btn_pressed),
-                aero_button("Open", Message::OpenFile, text_color, toolbar_bg, accent, btn_hover, btn_pressed),
-                aero_button("Save", Message::SaveFile, text_color, toolbar_bg, accent, btn_hover, btn_pressed),
+                make_btn("New", Message::NewTab),
+                make_btn("Open", Message::OpenFile),
+                make_btn("Save", Message::SaveFile),
             ]
-            .spacing(6)
-            .padding([4, 8]),
+            .spacing(4)
+            .padding([6, 8]),
         )
         .width(Length::Fill)
         .style(move |_theme| container::Style {
             background: Some(Background::Color(Color::from_rgb(
-                toolbar_bg.r * 0.96,
-                toolbar_bg.g * 0.96,
-                toolbar_bg.b * 0.96,
+                toolbar_bg.r * 0.95,
+                toolbar_bg.g * 0.95,
+                toolbar_bg.b * 0.95,
             ))),
             border: Border {
                 color: border_color,
-                width: 1.0,
+                width: 0.0,
                 radius: 0.0.into(),
             },
             ..Default::default()
@@ -229,23 +226,23 @@ impl AeroTxt {
             .height(Length::Fill)
             .font(iced::Font::MONOSPACE)
             .size(14)
-            .padding(10)
+            .padding(12)
             .style(move |_theme, _status| text_editor::Style {
                 background: Background::Color(bg),
                 border: Border {
                     color: border_color,
-                    width: 1.0,
+                    width: 0.0,
                     radius: 0.0.into(),
                 },
-                icon: text_color,
-                placeholder: Color::from_rgb(0.5, 0.5, 0.55),
+                icon: muted,
+                placeholder: Color::from_rgb(0.4, 0.4, 0.45),
                 value: text_color,
-                selection: Color::from_rgb(accent.r, accent.g, accent.b),
+                selection: selection,
             });
 
         let status_bar = container(
             row![
-                text(&self.status).size(12).color(text_color),
+                text(&self.status).size(12).color(muted),
                 Space::with_width(Length::Fill),
                 text(if self.file_path.is_some() {
                     self.file_path.as_ref().unwrap().display().to_string()
@@ -253,16 +250,16 @@ impl AeroTxt {
                     "Untitled".to_string()
                 })
                 .size(12)
-                .color(Color::from_rgb(0.5, 0.5, 0.55)),
+                .color(muted),
             ]
-            .padding([2, 12]),
+            .padding([4, 12]),
         )
         .width(Length::Fill)
         .style(move |_theme| container::Style {
             background: Some(Background::Color(toolbar_bg)),
             border: Border {
                 color: border_color,
-                width: 1.0,
+                width: 0.0,
                 radius: 0.0.into(),
             },
             ..Default::default()
